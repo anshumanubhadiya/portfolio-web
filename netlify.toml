@@ -1,0 +1,5 @@
+[build]
+  # Install dependencies if they are missing (e.g. builds from a fresh source copy),
+  # then run the normal build.
+  command = "[ -x node_modules/.bin/tsc ] || npm ci --include=dev; npm run build"
+  publish = "dist"

@@ -1,0 +1,14 @@
+# Dependencies (installed fresh by Netlify on every build)
+node_modules/
+.npm-cache/
+
+# Build output
+dist/
+
+# Netlify
+.netlify/
+
+# Logs & OS files
+npm-debug.log*
+.DS_Store
+Thumbs.db
