@@ -1,0 +1,1095 @@
+diff --git a/index.html b/index.html
+index 22edb31..a6c1563 100644
+--- a/index.html
++++ b/index.html
+@@ -13,7 +13,7 @@
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+     <link
+-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
++      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500&family=Inter+Tight:wght@400;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+       rel="stylesheet"
+     />
+   </head>
+diff --git a/src/components/Landing.tsx b/src/components/Landing.tsx
+index 54688b5..60dfa13 100644
+--- a/src/components/Landing.tsx
++++ b/src/components/Landing.tsx
+@@ -1,459 +1,631 @@
+-import { motion } from 'framer-motion'
++import { useEffect, useState, type ReactNode } from 'react'
++import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-motion'
+ import {
+   ArrowRight,
+-  ArrowUpRight,
++  BookOpenCheck,
+   Boxes,
++  QrCode,
+   ShoppingCart,
+-  Users,
+   Sparkles,
++  Users,
++  Wallet,
+   WifiOff,
+-  QrCode,
++  type LucideIcon,
+ } from 'lucide-react'
+ import { bizTypes } from '../data'
+-import { Reveal, Photo, Logo, fadeUp, stagger } from './ui'
+ import { LiveClock } from './LiveClock'
+ 
+-function Ticker() {
+-  const nums = ['3', '2', '1', '0', '1', '2', '3']
++/* ---------- shared bits ---------- */
++
++const focus =
++  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dusk-lilac'
++
++const btnPrimary = `inline-flex h-[52px] items-center justify-center gap-2 rounded-lg border border-white/15 bg-dusk-violet px-6 text-lg font-medium tracking-[-0.01em] text-dusk-white transition-colors hover:bg-[#654d99] ${focus}`
++const btnGlass = `inline-flex h-[52px] items-center justify-center gap-2 rounded-lg border border-white/25 bg-black/35 px-6 text-lg font-medium tracking-[-0.01em] text-dusk-white transition-colors hover:bg-black/50 ${focus}`
++const btnGhost = `inline-flex h-11 items-center gap-2 rounded-md bg-white/10 px-4 text-base text-dusk-white transition-colors hover:bg-white/15 ${focus}`
++
++function Mark({ className = 'h-7 w-7' }: { className?: string }) {
+   return (
+-    <div className="flex items-center gap-1.5 font-mono text-sm text-white/40">
+-      {nums.map((n, i) => (
+-        <span key={i} className="flex items-center gap-1.5">
+-          <span className="text-white/70">{n}</span>
+-          <span className="text-white/20">·</span>
+-        </span>
+-      ))}
+-    </div>
++    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
++      <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" />
++      <path d="M16 5.5 L26 24.5 H21.6 L16 12.4 L10.4 24.5 H6 Z" fill="#a78bfa" />
++    </svg>
++  )
++}
++
++function Wordmark() {
++  return (
++    <span className="flex items-center gap-2.5">
++      <Mark />
++      <span className="font-tight text-base font-semibold tracking-tight text-dusk-white">
++        Arion AI OS
++      </span>
++    </span>
+   )
+ }
+ 
+-function Nav({ onEnter }: { onEnter: () => void }) {
++function Tag({ children, color }: { children: ReactNode; color?: string }) {
+   return (
+-    <motion.header
+-      initial={{ y: -60, opacity: 0 }}
+-      animate={{ y: 0, opacity: 1 }}
+-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+-      className="fixed inset-x-0 top-0 z-40 border-b border-white/5 bg-ink-950/70 backdrop-blur-xl"
++    <span
++      className="inline-block rounded-lg px-3 py-1.5 text-sm font-medium"
++      style={
++        color
++          ? { color, backgroundColor: `${color}1a` }
++          : { color: '#f7f7f8', backgroundColor: 'rgba(255,255,255,0.1)' }
++      }
+     >
+-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
+-        <a href="#top" className="flex items-center gap-2.5">
+-          <Logo className="h-7 w-7" />
+-          <span className="font-display text-base font-semibold tracking-tight text-white">
+-            ARION <span className="text-gradient">AI OS</span>
+-          </span>
++      {children}
++    </span>
++  )
++}
++
++/** One carriage of the journey: tinted 16px panel inset from the viewport, rail + ring node on the left. */
++function Chapter({
++  id,
++  tone,
++  accent = '#8b94a8',
++  tag,
++  heading,
++  lead,
++  children,
++}: {
++  id?: string
++  tone: string
++  accent?: string
++  tag: string
++  heading: ReactNode
++  lead?: string
++  children: ReactNode
++}) {
++  return (
++    <section id={id} className="px-4 py-2">
++      <div
++        className="relative overflow-hidden rounded-2xl ring-1 ring-inset ring-white/10"
++        style={{ backgroundColor: tone }}
++      >
++        <div
++          aria-hidden="true"
++          className="pointer-events-none absolute bottom-0 left-6 top-0 hidden w-px md:block"
++          style={{ background: `linear-gradient(${accent}00, ${accent}80 14%, ${accent}80 86%, ${accent}00)` }}
++        />
++        <div
++          aria-hidden="true"
++          className="absolute left-[19px] top-[92px] hidden h-[11px] w-[11px] rounded-full border-2 md:block"
++          style={{ borderColor: accent, backgroundColor: tone }}
++        />
++        <div className="mx-auto max-w-[1160px] px-5 py-20 sm:px-8 md:pl-16 lg:py-28">
++          <Tag color={accent === '#8b94a8' ? undefined : accent}>{tag}</Tag>
++          <h2 className="mt-6 max-w-2xl font-serif text-[28px] font-normal leading-[1.3] tracking-[-0.02em] text-dusk-white sm:text-4xl">
++            {heading}
++          </h2>
++          {lead && (
++            <p className="mt-4 max-w-xl text-lg font-medium leading-[1.6] text-dusk-mist">{lead}</p>
++          )}
++          <div className="mt-12">{children}</div>
++        </div>
++      </div>
++    </section>
++  )
++}
++
++/* ---------- top bar ---------- */
++
++function TopBar({ onEnter }: { onEnter: () => void }) {
++  return (
++    <header className="sticky top-0 z-40 bg-dusk-midnight/90 backdrop-blur-md">
++      <nav className="mx-auto flex h-[72px] max-w-[1280px] items-center justify-between px-5 sm:px-8">
++        <a href="#top" className={`rounded-md ${focus}`}>
++          <Wordmark />
+         </a>
+-        <div className="hidden items-center gap-6 md:flex">
++        <div className="hidden items-center gap-1 md:flex">
+           {[
+-            ['About', '#about'],
+-            ['Business types', '#business-types'],
++            ['Trades', '#business-types'],
+             ['Features', '#features'],
++            ['Day close', '#day-close'],
+             ['Contact', '#contact'],
+           ].map(([label, href]) => (
+             <a
+               key={href}
+               href={href}
+-              className="text-sm text-white/60 transition-colors hover:text-white"
++              className={`rounded-md px-3 py-1.5 text-base text-dusk-white transition-colors hover:bg-white/10 ${focus}`}
+             >
+               {label}
+             </a>
+           ))}
+         </div>
+         <div className="flex items-center gap-4">
+-          <LiveClock className="hidden text-sm text-white/40 lg:inline" />
+-          <button
+-            onClick={onEnter}
+-            className="group inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink-950 transition-all hover:bg-white/90"
+-          >
++          <LiveClock className="hidden text-sm text-dusk-track lg:inline" />
++          <button onClick={onEnter} className={btnGhost}>
+             Enter app
+-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+           </button>
+         </div>
+       </nav>
+-    </motion.header>
++    </header>
+   )
+ }
+ 
+-function Hero({ onEnter }: { onEnter: () => void }) {
++/* ---------- console window (sample product UI) ---------- */
++
++type Tone = 'ok' | 'warn' | 'plain'
++interface Row {
++  a: string
++  b: string
++  c: string
++  tone: Tone
++}
++interface Panel {
++  id: string
++  label: string
++  icon: LucideIcon
++  crumb: string
++  rows: Row[]
++}
++
++const panels: Panel[] = [
++  {
++    id: 'sales',
++    label: 'Sales',
++    icon: ShoppingCart,
++    crumb: 'Today · 4 bills',
++    rows: [
++      { a: 'Bill 1042 · Ravi Patel', b: '₹2,400', c: 'Paid · UPI', tone: 'ok' },
++      { a: 'Bill 1041 · Meena Shah', b: '₹6,800', c: 'Advance ₹2,000', tone: 'warn' },
++      { a: 'Bill 1040 · Walk-in', b: '₹950', c: 'Paid · Cash', tone: 'ok' },
++      { a: 'Bill 1039 · Imran Khan', b: '₹8,300', c: 'Paid · UPI', tone: 'ok' },
++    ],
++  },
++  {
++    id: 'stock',
++    label: 'Stock',
++    icon: Boxes,
++    crumb: 'Frames & lenses',
++    rows: [
++      { a: 'Aviator frame, gold', b: '14 in stock', c: 'OK', tone: 'ok' },
++      { a: 'Blue-cut lens 1.56', b: '3 left', c: 'Reorder', tone: 'warn' },
++      { a: 'Lens cleaning kit', b: '40 in stock', c: 'OK', tone: 'ok' },
++      { a: 'Hard frame case', b: '2 left', c: 'Reorder', tone: 'warn' },
++    ],
++  },
++  {
++    id: 'clients',
++    label: 'Clients',
++    icon: Users,
++    crumb: 'Search by phone',
++    rows: [
++      { a: 'Ravi Patel', b: '98•••• 0210', c: 'Nothing due', tone: 'plain' },
++      { a: 'Meena Shah', b: '97•••• 4418', c: '₹4,800 due', tone: 'warn' },
++      { a: 'Imran Khan', b: '99•••• 7305', c: 'Nothing due', tone: 'plain' },
++      { a: 'Anita Desai', b: '98•••• 1126', c: '₹1,200 due', tone: 'warn' },
++    ],
++  },
++  {
++    id: 'udhaar',
++    label: 'Udhaar',
++    icon: Wallet,
++    crumb: 'Running balances',
++    rows: [
++      { a: 'Meena Shah', b: '₹4,800', c: 'Since 12 Oct', tone: 'warn' },
++      { a: 'Anita Desai', b: '₹1,200', c: 'Since 28 Oct', tone: 'warn' },
++      { a: 'Kiran Joshi', b: '₹600', c: 'Paid today', tone: 'ok' },
++      { a: 'Total outstanding', b: '₹6,000', c: '2 clients', tone: 'plain' },
++    ],
++  },
++  {
++    id: 'close',
++    label: 'Day close',
++    icon: BookOpenCheck,
++    crumb: 'Evening hisaab',
++    rows: [
++      { a: 'Cash in', b: '₹6,200', c: '2 bills', tone: 'plain' },
++      { a: 'UPI in', b: '₹9,950', c: '2 bills', tone: 'plain' },
++      { a: 'Udhaar added', b: '₹4,800', c: '1 client', tone: 'warn' },
++      { a: 'Sales for the day', b: '₹20,950', c: 'Ready to close', tone: 'ok' },
++    ],
++  },
++]
++
++const toneText: Record<Tone, string> = {
++  ok: 'text-dusk-green',
++  warn: 'text-dusk-peach',
++  plain: 'text-dusk-mist',
++}
++
++function Console({ panel, shop = 'Sample optical shop' }: { panel: Panel; shop?: string }) {
++  const reduce = useReducedMotion()
+   return (
+-    <section id="top" className="relative overflow-hidden pb-16 pt-28 sm:pt-36">
+-      <div className="pointer-events-none absolute inset-0 -z-10">
+-        <div className="absolute left-1/2 top-[-20%] h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-violet-600/15 blur-[140px]" />
+-        <div className="absolute inset-0 bg-grid mask-fade-y opacity-40" />
++    <div className="overflow-hidden rounded-[10px] border border-white/10 bg-dusk-console text-left">
++      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-sm">
++        <span className="truncate text-dusk-mist">
++          {shop} <span className="text-dusk-track">/</span>{' '}
++          <span className="text-dusk-white">{panel.label}</span>
++        </span>
++        <span className="shrink-0 text-dusk-track">{panel.crumb}</span>
+       </div>
++      <div className="min-h-[236px] bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px] p-3 sm:p-5">
++        <AnimatePresence mode="wait" initial={false}>
++          <motion.ul
++            key={panel.id}
++            initial={reduce ? false : { opacity: 0, y: 6 }}
++            animate={{ opacity: 1, y: 0 }}
++            exit={reduce ? undefined : { opacity: 0 }}
++            transition={{ duration: 0.18 }}
++            className="space-y-2"
++          >
++            {panel.rows.map((r) => (
++              <li
++                key={r.a}
++                className="grid grid-cols-[1fr_auto] items-center gap-x-4 rounded-lg border border-white/10 bg-dusk-carriage px-4 py-3 sm:grid-cols-[1fr_120px_150px]"
++              >
++                <span className="truncate text-[15px] text-dusk-white">{r.a}</span>
++                <span className="text-right text-[15px] font-medium text-dusk-white sm:text-left">{r.b}</span>
++                <span className={`col-span-2 text-sm sm:col-span-1 sm:text-right ${toneText[r.tone]}`}>{r.c}</span>
++              </li>
++            ))}
++          </motion.ul>
++        </AnimatePresence>
++      </div>
++      <div className="border-t border-white/10 px-4 py-2 text-xs text-dusk-track">Sample data</div>
++    </div>
++  )
++}
+ 
+-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+-        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+-          <div>
+-            <motion.div
+-              initial={{ opacity: 0, y: 20 }}
+-              animate={{ opacity: 1, y: 0 }}
+-              transition={{ duration: 0.7 }}
+-              className="flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-white/40"
+-            >
+-              <span className="h-px w-10 bg-white/30" />
+-              The operating system for Indian business
+-            </motion.div>
+-
+-            <motion.h1
+-              initial={{ opacity: 0, y: 40 }}
+-              animate={{ opacity: 1, y: 0 }}
+-              transition={{ duration: 0.9, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+-              className="display-giant mt-5 text-[20vw] text-white sm:text-[15vw] lg:text-[11rem]"
+-            >
+-              ARION
+-              <br />
+-              <span className="text-gradient">AI&nbsp;OS</span>
+-            </motion.h1>
+-
+-            <motion.p
+-              initial={{ opacity: 0, y: 20 }}
+-              animate={{ opacity: 1, y: 0 }}
+-              transition={{ duration: 0.7, delay: 0.3 }}
+-              className="mt-7 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg"
+-            >
+-              We are experts in the daily running of Indian shops. Inventory, clients,
+-              sales, udhaar and UPI payments — one clean, offline-ready system that keeps
+-              billing even when the internet drops.
+-            </motion.p>
++/* ---------- hero ---------- */
+ 
+-            <motion.div
+-              initial={{ opacity: 0, y: 20 }}
+-              animate={{ opacity: 1, y: 0 }}
+-              transition={{ duration: 0.7, delay: 0.4 }}
+-              className="mt-8 flex flex-wrap items-center gap-4"
+-            >
+-              <button
+-                onClick={onEnter}
+-                className="group inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-ink-950 transition-all hover:bg-white/90"
+-              >
+-                Start your workspace
+-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
++function Hero({ onEnter }: { onEnter: () => void }) {
++  const reduce = useReducedMotion()
++  const [active, setActive] = useState('sales')
++  const panel = panels.find((p) => p.id === active) ?? panels[0]
++
++  return (
++    <section id="top" className="px-4 pb-2 pt-1">
++      <div className="dusk-sky relative overflow-hidden rounded-2xl ring-1 ring-inset ring-white/10">
++        <div className="mx-auto max-w-[1060px] px-5 pt-16 text-center sm:px-8 sm:pt-24">
++          <motion.div
++            initial={reduce ? false : { opacity: 0, y: 24 }}
++            animate={{ opacity: 1, y: 0 }}
++            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
++          >
++            <h1 className="mx-auto max-w-3xl font-serif text-[34px] font-medium leading-[1.14] tracking-[-0.036em] text-dusk-white sm:text-5xl lg:text-[54px]">
++              Your shop’s hisaab, on one calm screen.
++            </h1>
++            <p className="mx-auto mt-5 max-w-xl text-lg leading-[1.55] text-dusk-white/85 sm:text-xl">
++              Inventory, clients, sales, udhaar and UPI in one system that keeps billing even when the
++              internet drops.
++            </p>
++            <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
++              <button onClick={onEnter} className={btnPrimary}>
++                Start your workspace <ArrowRight className="h-5 w-5" />
+               </button>
+-              <a
+-                href="#business-types"
+-                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+-              >
+-                Explore 9 business types
++              <a href="#business-types" className={btnGlass}>
++                See the nine trades
+               </a>
+-            </motion.div>
+-          </div>
+-
+-          {/* Right rail — clock + ticker + photo stack */}
+-          <div className="flex flex-col gap-5">
+-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+-              <span className="text-xs uppercase tracking-[0.25em] text-white/40">
+-                Fresh drops · everyday
+-              </span>
+-              <Ticker />
+             </div>
+-            <div className="grid grid-cols-3 gap-3">
+-              <Photo seed="arion-hero-1" w={400} h={520} className="h-44 rounded-xl" alt="Retail counter" />
+-              <Photo seed="arion-hero-2" w={400} h={300} className="h-28 rounded-xl" alt="Shop floor" />
+-              <Photo seed="arion-hero-3" w={400} h={360} className="h-32 rounded-xl" alt="Billing" />
+-            </div>
+-            <div className="grid grid-cols-2 gap-3">
+-              <Photo seed="arion-hero-4" w={500} h={300} className="h-28 rounded-xl" alt="Inventory" />
+-              <Photo seed="arion-hero-5" w={500} h={300} className="h-28 rounded-xl" alt="Payments" />
+-            </div>
+-          </div>
++          </motion.div>
++
++          <motion.div
++            initial={reduce ? false : { opacity: 0, y: 60 }}
++            animate={{ opacity: 1, y: 0 }}
++            transition={{ duration: 1.1, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
++            className="mt-14"
++          >
++            <Console panel={panel} />
++          </motion.div>
+         </div>
+-      </div>
+-    </section>
+-  )
+-}
+ 
+-function Philosophy() {
+-  return (
+-    <section id="about" className="relative py-20 sm:py-28">
+-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+-        <Reveal>
+-          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-white/40">
+-            <span className="h-px w-10 bg-white/30" />
+-            We are — simple · fast · offline-ready
+-          </div>
+-        </Reveal>
+-        <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_1fr]">
+-          <Reveal>
+-            <h2 className="display-giant text-5xl text-white sm:text-6xl lg:text-7xl">
+-              We embody the daily <span className="text-gradient">hisaab</span>, beautifully.
+-            </h2>
+-          </Reveal>
+-          <div className="space-y-6">
+-            {[
+-              ['01', 'Bringing bold ideas to life through clean, fast software.'],
+-              ['02', 'Elevating counter productivity with offline-first billing.'],
+-              ['03', 'New generation. A new vision. A new way to run business.'],
+-            ].map(([n, text]) => (
+-              <Reveal key={n} delay={0.05}>
+-                <div className="flex gap-5 border-t border-white/10 pt-5">
+-                  <span className="font-display text-sm font-semibold text-gradient">{n}</span>
+-                  <p className="max-w-md text-lg text-white/70">{text}</p>
+-                </div>
+-              </Reveal>
+-            ))}
++        {/* chapter dock */}
++        <div className="relative mx-auto -mt-5 mb-5 flex max-w-full justify-center px-3">
++          <div
++            role="tablist"
++            aria-label="Arion modules"
++            className="flex max-w-full overflow-x-auto rounded-xl border border-white/10 bg-dusk-console/95 p-1.5 backdrop-blur"
++          >
++            {panels.map((p) => {
++              const Icon = p.icon
++              const on = p.id === active
++              return (
++                <button
++                  key={p.id}
++                  role="tab"
++                  aria-selected={on}
++                  onClick={() => setActive(p.id)}
++                  className={`flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[15px] transition-colors ${focus} ${
++                    on ? 'bg-dusk-violet/40 text-dusk-lilac' : 'text-dusk-mist hover:text-dusk-white'
++                  }`}
++                >
++                  <Icon className="h-4 w-4" strokeWidth={1.6} />
++                  {p.label}
++                </button>
++              )
++            })}
+           </div>
+         </div>
+-        <div className="mt-14 grid grid-cols-2 gap-4 lg:grid-cols-3">
+-          <Photo seed="arion-philosophy" w={900} h={700} className="col-span-2 h-64 rounded-2xl lg:h-80" alt="Business in motion" />
+-          <Photo seed="arion-abstract-1" w={600} h={700} className="h-64 rounded-2xl lg:h-80" alt="Detail" />
+-        </div>
+       </div>
+     </section>
+   )
+ }
+ 
+-function BusinessShowcase({ onEnter }: { onEnter: () => void }) {
+-  return (
+-    <section id="business-types" className="relative py-20 sm:py-28">
+-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+-        <div className="flex flex-wrap items-end justify-between gap-6">
+-          <Reveal>
+-            <div>
+-              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-white/40">
+-                <span className="h-px w-10 bg-white/30" />
+-                On the counter
+-              </div>
+-              <h2 className="display-giant mt-4 text-5xl text-white sm:text-6xl lg:text-7xl">
+-                Nine trades.
+-                <br />
+-                One <span className="text-gradient">operating system</span>.
+-              </h2>
+-            </div>
+-          </Reveal>
+-          <Reveal delay={0.1}>
+-            <p className="max-w-xs text-white/55">
+-              Pick your business once and your sidebar, forms, invoices and daily actions
+-              instantly match how your shop actually works.
+-            </p>
+-          </Reveal>
+-        </div>
++/* ---------- chapters ---------- */
+ 
+-        <motion.div
+-          variants={stagger}
+-          initial="hidden"
+-          whileInView="show"
+-          viewport={{ once: true, margin: '-60px' }}
+-          className="mt-14 grid grid-cols-2 gap-4 md:grid-cols-3"
+-        >
+-          {bizTypes.map((b) => {
+-            const Icon = b.icon
+-            return (
+-              <motion.button
+-                key={b.id}
+-                variants={fadeUp}
+-                onClick={onEnter}
+-                className="group relative overflow-hidden rounded-2xl border border-white/10 text-left transition-all duration-500 hover:border-white/25"
+-              >
+-                <Photo seed={b.photo} w={600} h={420} className="h-40 sm:h-48" alt={b.name} />
+-                <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/40 to-transparent" />
+-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-4">
+-                  <div>
+-                    <div className="flex items-center gap-2">
+-                      <Icon className="h-4 w-4 text-white/70" />
+-                      <h3 className="font-display text-base font-semibold text-white">
+-                        {b.name}
+-                      </h3>
+-                    </div>
+-                    <p className="mt-0.5 text-xs text-white/55">{b.tagline}</p>
+-                  </div>
+-                  <ArrowUpRight className="h-4 w-4 shrink-0 text-white/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white" />
+-                </div>
+-              </motion.button>
+-            )
+-          })}
+-        </motion.div>
++function Trades({ onEnter }: { onEnter: () => void }) {
++  return (
++    <Chapter
++      id="business-types"
++      tone="#1b2132"
++      tag="Nine trades"
++      heading="Pick your trade once. The sidebar, forms and invoices follow."
++      lead="Optical, clothing, repair, real estate and more. Each trade gets its own labels, stock fields and daily actions."
++    >
++      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
++        {bizTypes.map((b) => {
++          const Icon = b.icon
++          return (
++            <button
++              key={b.id}
++              onClick={onEnter}
++              className={`group rounded-xl border border-white/10 bg-white/5 p-5 text-left transition-colors hover:border-white/25 hover:bg-white/[0.08] ${focus}`}
++            >
++              <Icon className="h-6 w-6 text-dusk-lilac" strokeWidth={1.5} />
++              <h3 className="mt-4 text-base font-semibold text-dusk-white">{b.name}</h3>
++              <p className="mt-1.5 text-sm leading-[1.5] text-dusk-mist">{b.tagline}</p>
++            </button>
++          )
++        })}
+       </div>
+-    </section>
++    </Chapter>
+   )
+ }
+ 
+-function Pillars() {
+-  const items = [
++function Features() {
++  const pillars = [
+     {
+       icon: Boxes,
+       title: 'Inventory',
+-      desc: 'Stock, variants, buy/sell price and low-stock alerts. Stock rises on purchase, falls on every sale — automatically.',
++      desc: 'Stock, variants, buy and sell price, low-stock alerts. Stock rises on purchase and falls on every sale.',
+     },
+     {
+       icon: Users,
+       title: 'Clients',
+-      desc: 'Name + 10-digit Indian phone, full purchase history and a running udhaar balance. Search by phone in an instant.',
++      desc: 'Name and 10-digit phone, full purchase history and a running udhaar balance. Find anyone by phone.',
+     },
+     {
+       icon: ShoppingCart,
+       title: 'Sales',
+-      desc: 'Bill in three taps. Advance or full payment, invoice / receipt, and the ledger updates the moment you save.',
++      desc: 'Bill in three taps. Advance or full payment, invoice or receipt, and the ledger updates on save.',
+     },
+   ]
++  const strip = [
++    { icon: QrCode, label: 'UPI QR and links', sub: '₹0 fee, share on WhatsApp' },
++    { icon: WifiOff, label: 'Offline-first', sub: 'Billing survives bad internet' },
++    { icon: Sparkles, label: 'AI assistant', sub: 'Speak a bill, get a draft' },
++  ]
+   return (
+-    <section id="features" className="relative border-y border-white/5 bg-white/[0.02] py-20 sm:py-28">
+-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+-        <Reveal>
+-          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-white/40">
+-            <span className="h-px w-10 bg-white/30" />
+-            Beyond billing
+-          </div>
+-          <h2 className="display-giant mt-4 text-5xl text-white sm:text-6xl lg:text-7xl">
+-            Three pillars.
+-            <br />
+-            <span className="text-gradient">Everything wired together.</span>
+-          </h2>
+-        </Reveal>
+-
+-        <motion.div
+-          variants={stagger}
+-          initial="hidden"
+-          whileInView="show"
+-          viewport={{ once: true, margin: '-60px' }}
+-          className="mt-14 grid gap-4 md:grid-cols-3"
+-        >
+-          {items.map((it) => {
+-            const Icon = it.icon
+-            return (
+-              <motion.div
+-                key={it.title}
+-                variants={fadeUp}
+-                className="rounded-2xl border border-white/10 bg-ink-900/40 p-7 transition-all duration-500 hover:border-white/25"
+-              >
+-                <Icon className="h-8 w-8 text-cyan-300" />
+-                <h3 className="mt-5 font-display text-xl font-semibold text-white">{it.title}</h3>
+-                <p className="mt-3 text-sm leading-relaxed text-white/55">{it.desc}</p>
+-              </motion.div>
+-            )
+-          })}
+-        </motion.div>
++    <Chapter
++      id="features"
++      tone="#1f2b2e"
++      accent="#42946e"
++      tag="Beyond billing"
++      heading="Three modules, wired together."
++      lead="A sale updates stock, the client’s ledger and the day’s hisaab in one save."
++    >
++      <div className="grid gap-8 md:grid-cols-3">
++        {pillars.map((p) => {
++          const Icon = p.icon
++          return (
++            <div key={p.title}>
++              <Icon className="h-7 w-7 text-dusk-white" strokeWidth={1.4} />
++              <h3 className="mt-4 text-base font-semibold leading-6 text-dusk-white">{p.title}</h3>
++              <p className="mt-1.5 text-base leading-6 text-dusk-mist">{p.desc}</p>
++            </div>
++          )
++        })}
++      </div>
++      <div className="mt-12 grid gap-3 border-t border-white/10 pt-8 sm:grid-cols-3">
++        {strip.map((f) => {
++          const Icon = f.icon
++          return (
++            <div key={f.label} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
++              <Icon className="h-6 w-6 shrink-0 text-dusk-green" strokeWidth={1.5} />
++              <div>
++                <div className="text-sm font-semibold text-dusk-white">{f.label}</div>
++                <div className="text-sm text-dusk-mist">{f.sub}</div>
++              </div>
++            </div>
++          )
++        })}
++      </div>
++    </Chapter>
++  )
++}
+ 
+-        {/* Feature strip */}
+-        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+-          {[
+-            { icon: QrCode, label: 'UPI QR & links', sub: '₹0 fee, share on WhatsApp' },
+-            { icon: WifiOff, label: 'Offline-first', sub: 'Billing that survives bad internet' },
+-            { icon: Sparkles, label: 'AI assistant', sub: 'Speak a bill, get a draft' },
+-          ].map((f) => {
+-            const Icon = f.icon
+-            return (
+-              <Reveal key={f.label}>
+-                <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+-                  <Icon className="h-6 w-6 text-fuchsia-300" />
+-                  <div>
+-                    <div className="text-sm font-semibold text-white">{f.label}</div>
+-                    <div className="text-xs text-white/45">{f.sub}</div>
+-                  </div>
+-                </div>
+-              </Reveal>
+-            )
+-          })}
++function DayClose({ onEnter }: { onEnter: () => void }) {
++  return (
++    <Chapter
++      id="day-close"
++      tone="#251823"
++      accent="#eab38a"
++      tag="Every evening"
++      heading="Close the day with a clean hisaab."
++      lead="Cash, UPI and udhaar are already totalled by the time you pull the shutter down."
++    >
++      <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr]">
++        <div>
++          <p className="max-w-md text-base leading-7 text-dusk-mist">
++            No setup marathon. Pick your trade, add your stock and clients, and start billing the same
++            day. The day-close screen is generated from your bills, so there is nothing to re-enter.
++          </p>
++          <button onClick={onEnter} className={`${btnGhost} mt-6`}>
++            Read today’s hisaab <ArrowRight className="h-4 w-4" />
++          </button>
+         </div>
++        <Console panel={panels[4]} />
+       </div>
+-    </section>
++    </Chapter>
++  )
++}
++
++/* ---------- split-flap board ---------- */
++
++const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
++
++function Flap({ char, delay, active, dim }: { char: string; delay: number; active: boolean; dim: boolean }) {
++  const reduce = useReducedMotion()
++  const [shown, setShown] = useState(' ')
++
++  useEffect(() => {
++    if (reduce) {
++      setShown(char)
++      return
++    }
++    if (!active) return
++    let tick: ReturnType<typeof setInterval> | undefined
++    const start = setTimeout(() => {
++      let n = 0
++      tick = setInterval(() => {
++        n += 1
++        if (n > 7) {
++          setShown(char)
++          if (tick) clearInterval(tick)
++        } else {
++          setShown(GLYPHS[Math.floor(Math.random() * GLYPHS.length)])
++        }
++      }, 60)
++    }, delay)
++    return () => {
++      clearTimeout(start)
++      if (tick) clearInterval(tick)
++    }
++  }, [active, char, delay, reduce])
++
++  return (
++    <span
++      className={`relative flex h-11 w-7 items-center justify-center rounded bg-dusk-console font-mono text-2xl uppercase sm:h-[72px] sm:w-11 sm:text-[40px] ${
++        dim ? 'text-dusk-track' : 'text-dusk-white'
++      }`}
++    >
++      <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-px bg-white/[0.09]" />
++      {shown === ' ' ? '\u00a0' : shown}
++    </span>
+   )
+ }
+ 
+-function Manifesto({ onEnter }: { onEnter: () => void }) {
++function Board() {
++  const [ref, setRef] = useState<HTMLDivElement | null>(null)
++  const inView = useInView({ current: ref }, { once: true, amount: 0.4 })
++  const rows: [string, string][] = [
++    ['TRADES', '9'],
++    ['MODULES', '7'],
++    ['UPI FEE', '₹0'],
++    ['OFFLINE', 'YES'],
++  ]
+   return (
+-    <section className="relative py-20 sm:py-28">
+-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+-        <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
+-          <div className="space-y-6 text-3xl leading-tight text-white/85 sm:text-4xl">
+-            <Reveal>
+-              <p>
+-                Arion <span className="text-gradient">redefines</span> how Indian shops run,
+-              </p>
+-            </Reveal>
+-            <Reveal delay={0.05}>
+-              <p>
+-                with <span className="text-gradient">simplicity</span> &
+-              </p>
+-            </Reveal>
+-            <Reveal delay={0.1}>
+-              <p>
+-                <span className="text-gradient">speed</span> at the counter.
+-              </p>
+-            </Reveal>
+-            <Reveal delay={0.15}>
+-              <p className="mt-2 text-base text-white/50">
+-                No setup marathon. Pick your trade, add your stock and clients, and start
+-                billing the same day — with a clean day-close hisaab every evening.
+-              </p>
+-            </Reveal>
+-            <Reveal delay={0.2}>
+-              <button
+-                onClick={onEnter}
+-                className="group inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-ink-950 transition-all hover:bg-white/90"
+-              >
+-                Get in touch <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+-              </button>
+-            </Reveal>
+-          </div>
+-          <div className="grid grid-cols-2 gap-4">
+-            <Photo seed="arion-manifesto-1" w={500} h={600} className="h-56 rounded-2xl sm:h-72" alt="Counter" />
+-            <Photo seed="arion-manifesto-2" w={500} h={400} className="mt-8 h-44 rounded-2xl sm:h-52" alt="Ledger" />
+-            <Photo seed="arion-manifesto-3" w={500} h={400} className="h-44 rounded-2xl sm:h-52" alt="UPI" />
+-            <Photo seed="arion-manifesto-4" w={500} h={600} className="-mt-8 h-56 rounded-2xl sm:h-72" alt="Team" />
+-          </div>
++    <section className="px-4 py-2" aria-label="Arion at a glance">
++      <div ref={setRef} className="rounded-2xl bg-dusk-midnight px-4 py-16 ring-1 ring-inset ring-white/10 sm:py-24">
++        <div className="mx-auto flex max-w-[1160px] flex-col items-center gap-2 sm:gap-3">
++          {rows.map(([label, value], r) => {
++            const chars = [...label.split('').map((c) => ({ c, dim: true })), { c: ' ', dim: true }, ...value.split('').map((c) => ({ c, dim: false }))]
++            return (
++              <div key={label} className="flex gap-1 sm:gap-1.5" aria-label={`${label} ${value}`}>
++                {chars.map((x, i) => (
++                  <Flap key={i} char={x.c} dim={x.dim} active={inView} delay={r * 180 + i * 50} />
++                ))}
++              </div>
++            )
++          })}
+         </div>
+       </div>
+     </section>
+   )
+ }
+ 
+-function ContactCTA({ onEnter }: { onEnter: () => void }) {
++/* ---------- boarding-door finale ---------- */
++
++function Boarding({ onEnter }: { onEnter: () => void }) {
++  const reduce = useReducedMotion()
++  const door = { duration: 1.1, ease: [0.22, 1, 0.36, 1] as [number, number, number, number], delay: 0.25 }
+   return (
+-    <section id="contact" className="relative py-20 sm:py-28">
+-      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+-        <Reveal>
+-          <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-ink-800 to-ink-950 px-6 py-16 text-center sm:px-16 sm:py-20">
+-            <div className="pointer-events-none absolute left-1/4 top-0 h-64 w-64 rounded-full bg-cyan-500/15 blur-[100px]" />
+-            <div className="pointer-events-none absolute bottom-0 right-1/4 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-[100px]" />
+-            <div className="relative">
+-              <p className="text-xs uppercase tracking-[0.25em] text-white/40">
+-                Creating the future together
+-              </p>
+-              <h2 className="display-giant mt-4 text-5xl text-white sm:text-6xl">
+-                Run your business
+-                <br />
+-                on <span className="text-gradient">autopilot</span>.
+-              </h2>
+-              <p className="mx-auto mt-5 max-w-md text-white/60">
+-                Start free, pick your business type, and get a tailored workspace in
+-                minutes.
+-              </p>
+-              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+-                <button
+-                  onClick={onEnter}
+-                  className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-semibold text-ink-950 transition-all hover:bg-white/90 sm:w-auto"
+-                >
+-                  Start your workspace
+-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+-                </button>
+-              </div>
+-            </div>
+-          </div>
+-        </Reveal>
++    <section id="contact" className="px-4 py-2">
++      <div className="relative overflow-hidden rounded-2xl bg-dusk-midnight ring-1 ring-inset ring-white/10">
++        <div
++          aria-hidden="true"
++          className="absolute inset-0"
++          style={{
++            background:
++              'radial-gradient(60% 90% at 50% 100%, rgba(201,110,120,0.5), rgba(120,40,160,0.28) 50%, transparent 78%)',
++          }}
++        />
++        <div className="relative px-5 py-24 text-center sm:py-32">
++          <h2 className="mx-auto max-w-xl font-tight text-[30px] font-semibold leading-[1.2] tracking-[-0.015em] text-dusk-white sm:text-[40px]">
++            Open your shop’s workspace today.
++          </h2>
++          <p className="mx-auto mt-4 max-w-md text-lg leading-7 text-dusk-mist sm:text-xl">
++            Start free, pick your trade and get a workspace tailored to it in minutes.
++          </p>
++          <button
++            onClick={onEnter}
++            className={`mt-9 inline-flex h-14 items-center justify-center gap-2 rounded-[28px] border border-[#a05fcf] px-7 text-lg font-medium tracking-[-0.01em] text-dusk-white shadow-[0_0_6px_rgba(180,40,180,0.25),0_0_16px_rgba(102,43,223,0.25)] ${focus}`}
++            style={{
++              background:
++                'radial-gradient(73.46% 138.39% at 50.21% 0%, #aa0aaa 50%, #6d1dbd 75.47%, #381dbd 100%)',
++            }}
++          >
++            Start your workspace <ArrowRight className="h-5 w-5" />
++          </button>
++        </div>
++        {!reduce && (
++          <>
++            <motion.div
++              aria-hidden="true"
++              className="pointer-events-none absolute inset-y-0 left-0 z-20 w-1/2 border-r border-white/10 bg-dusk-midnight"
++              initial={{ x: 0 }}
++              whileInView={{ x: '-101%' }}
++              viewport={{ once: true, amount: 0.5 }}
++              transition={door}
++            />
++            <motion.div
++              aria-hidden="true"
++              className="pointer-events-none absolute inset-y-0 right-0 z-20 w-1/2 border-l border-white/10 bg-dusk-midnight"
++              initial={{ x: 0 }}
++              whileInView={{ x: '101%' }}
++              viewport={{ once: true, amount: 0.5 }}
++              transition={door}
++            />
++          </>
++        )}
+       </div>
+     </section>
+   )
+ }
+ 
++/* ---------- footer ---------- */
++
+ function Footer() {
+   return (
+-    <footer className="border-t border-white/10 py-12">
+-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+-        <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+-          <div className="flex items-center gap-2.5">
+-            <Logo className="h-7 w-7" />
+-            <span className="font-display text-base font-semibold text-white">
+-              ARION <span className="text-gradient">AI OS</span>
+-            </span>
+-          </div>
+-          <p className="text-xs text-white/40">
+-            Inventory · Clients · Sales · Udhaar · UPI · Day Close
++    <footer className="mx-auto max-w-[1280px] px-5 pb-16 pt-12 sm:px-8">
++      <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
++        <div className="max-w-xs">
++          <Wordmark />
++          <p className="mt-4 text-base leading-6 text-dusk-mist">
++            The business OS for Indian shops. Inventory, clients, sales, udhaar and UPI.
+           </p>
+         </div>
+-        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row">
+-          <p className="text-xs text-white/40">© 2026 Arion AI OS. All rights reserved.</p>
+-          <p className="text-xs text-white/40">Built in India · ₹ · wa.me ready</p>
+-        </div>
++        <ul className="grid grid-cols-2 gap-x-12 gap-y-2 text-base leading-[26px] text-dusk-white">
++          {[
++            ['Trades', '#business-types'],
++            ['Features', '#features'],
++            ['Day close', '#day-close'],
++            ['Contact', '#contact'],
++          ].map(([l, h]) => (
++            <li key={h}>
++              <a href={h} className={`rounded hover:underline ${focus}`}>
++                {l}
++              </a>
++            </li>
++          ))}
++        </ul>
++      </div>
++      <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
++        <p className="text-sm text-dusk-track">© 2026 Arion AI OS. Built in India.</p>
++        <p className="font-mono text-xs text-dusk-green">Billing keeps working offline</p>
+       </div>
+     </footer>
+   )
+@@ -461,15 +633,15 @@ function Footer() {
+ 
+ export function Landing({ onEnter }: { onEnter: () => void }) {
+   return (
+-    <div className="noise relative min-h-screen bg-ink-950 text-white">
+-      <Nav onEnter={onEnter} />
++    <div className="min-h-screen bg-dusk-midnight font-sans text-dusk-white">
++      <TopBar onEnter={onEnter} />
+       <main>
+         <Hero onEnter={onEnter} />
+-        <Philosophy />
+-        <BusinessShowcase onEnter={onEnter} />
+-        <Pillars />
+-        <Manifesto onEnter={onEnter} />
+-        <ContactCTA onEnter={onEnter} />
++        <Trades onEnter={onEnter} />
++        <Features />
++        <DayClose onEnter={onEnter} />
++        <Board />
++        <Boarding onEnter={onEnter} />
+       </main>
+       <Footer />
+     </div>
+diff --git a/src/index.css b/src/index.css
+index 5647436..7895770 100644
+--- a/src/index.css
++++ b/src/index.css
+@@ -104,6 +104,22 @@
+     pointer-events: none;
+   }
+ 
++  /* Landing: dusk sky behind the hero (Railway-style DESIGN.md) */
++  .dusk-sky {
++    background-color: #1b1530;
++    background-image:
++      radial-gradient(1.2px 1.2px at 12% 18%, rgba(247, 247, 248, 0.9), transparent 60%),
++      radial-gradient(1px 1px at 27% 9%, rgba(247, 247, 248, 0.7), transparent 60%),
++      radial-gradient(1.4px 1.4px at 41% 24%, rgba(247, 247, 248, 0.8), transparent 60%),
++      radial-gradient(1px 1px at 58% 12%, rgba(247, 247, 248, 0.6), transparent 60%),
++      radial-gradient(1.2px 1.2px at 71% 21%, rgba(247, 247, 248, 0.85), transparent 60%),
++      radial-gradient(1px 1px at 86% 8%, rgba(247, 247, 248, 0.7), transparent 60%),
++      radial-gradient(1.2px 1.2px at 93% 28%, rgba(247, 247, 248, 0.6), transparent 60%),
++      radial-gradient(80% 45% at 20% 78%, rgba(201, 143, 138, 0.35), transparent 70%),
++      radial-gradient(70% 40% at 82% 70%, rgba(122, 90, 126, 0.45), transparent 70%),
++      linear-gradient(180deg, #1b1530 0%, #2e2350 38%, #5a4478 68%, #a77a86 100%);
++  }
++
+   /* Thin app scrollbar */
+   .scrollbar-thin::-webkit-scrollbar {
+     width: 6px;
+diff --git a/tailwind.config.js b/tailwind.config.js
+index 4dbccbe..43b2153 100644
+--- a/tailwind.config.js
++++ b/tailwind.config.js
+@@ -12,6 +12,21 @@ export default {
+           700: '#1a1a2a',
+           600: '#26263a',
+         },
++        dusk: {
++          midnight: '#13111c',
++          console: '#0b0b0f',
++          navy: '#1b2132',
++          pine: '#1f2b2e',
++          plum: '#251823',
++          carriage: '#1c1a28',
++          violet: '#553f83',
++          lilac: '#a78bfa',
++          green: '#42946e',
++          peach: '#eab38a',
++          mist: '#a1a0ab',
++          track: '#6b7280',
++          white: '#f7f7f8',
++        },
+         arion: {
+           cyan: '#22d3ee',
+           violet: '#8b5cf6',
+@@ -25,6 +40,8 @@ export default {
+       fontFamily: {
+         display: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
++        serif: ['"IBM Plex Serif"', 'Georgia', 'Cambria', 'serif'],
++        tight: ['"Inter Tight"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+       },
+       backgroundImage: {
+         'grid-faint':
